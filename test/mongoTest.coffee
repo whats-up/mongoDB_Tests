@@ -1,4 +1,3 @@
-# forever start -w -f js/mongoTest.js
 
 mongo = require "mongodb"
 Db = mongo.Db
