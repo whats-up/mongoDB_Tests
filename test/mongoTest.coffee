@@ -34,7 +34,7 @@ describe "myModule", ->
       db.close()
       done()
 
-  it '接続テスト',(done)->
+  it 'test connection',(done)->
     assert coll
     done()
 
@@ -95,7 +95,8 @@ describe "myModule", ->
           ###
           data[0]はinsert済みな所で再度insertするとエラーになる
           ###
-          assert err.err is 'E11000 duplicate key error index: mongo_test.testCollection.$_id_  dup key: { : 1 }'
+          assert err.code is 11000
+          #'E11000 duplicate key error index: mongo_test.testCollection.$_id_  dup key: { : 1 }'
           done()
     ###
     save([doc][, options], [callback])
@@ -274,29 +275,43 @@ describe "myModule", ->
 
     describe "insert or null",->
       it 'insert or null -1'
-    describe "distinkt",->
-      it 'insert or null -1'
-module.exports =
+    describe "distinct",->
+      ###
+      distinct(key[, query][, options], callback)
+      ###
+      it '重複行を除外してデータを取得',(done)->
+        data = [
+          {name:'taro',place:'tokyo',text:'こんにちはこんにちは！'}
+          {name:'taro',place:'tokyo',text:'こんばんはこんばんは！'}
+          {name:'jiro',place:'osaka',text:'まいどまいど'}
+          {name:'hanako',place:'tokyo',text:'hey!guys!'}
+        ]
+        coll.insert data,{w:1}, (err,result)->
+          coll.distinct 'name',(err,docs)->
+            assert err is null
+            assert docs.length is 3
+            assert docs.sort()[0] is ["taro","jiro","hanako"].sort()[0]
+            assert docs.sort()[1] is ["taro","jiro","hanako"].sort()[1]
+            assert docs.sort()[2] is ["taro","jiro","hanako"].sort()[2]
+            coll.distinct 'name',{place:'tokyo'},(err,docs)->
+              assert docs.length is 2
+              done()
 
-  upsert003:->
-        #_idを指定した場合は、saveの挙動が正しくなる。
-        json = {
-          name: 'taro'
-          update_at: null
-          protected: false
-          _id : 1
-        }
-        # この場合のupsertはitemが存在しないのでinsertになる
-        collection.update {name:'taro'},json, {upsert:true, w: 1},(err, result)->
-        # 上記のupdateを下記のsaveに起き換えてもitemは存在しないのでinsertになる
-        # collection.save json,(err,result)->
-          collection.find().toArray (err,items)->
-            log "insert:"
-            log items
-            json['protected'] = true
-            collection.save json,(err,result)->
-              collection.find().toArray (err,items)->
-                log 'save:'
-                log items
-                db.dropCollection 'testCollection'
-                db.close()
+    describe "count",->
+      ###
+      count([query][, options], callback)
+      ###
+      it 'コレクションの要素数を取得',(done)->
+        data =[
+          {name:'taro'}
+          {name:'jiro'}
+          {name:'andy'}
+          {name:'bob'}
+          {name:'jon'}
+        ]
+        coll.insert data,{w:1},(err,result)->
+          coll.count (err,count1)->
+            assert count1 is 5
+            coll.count {name:'taro'},(err,count2)->
+              assert count2 is 1
+              done()

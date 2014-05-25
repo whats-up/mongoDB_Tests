@@ -49,7 +49,7 @@ describe("myModule", function() {
       return done();
     });
   });
-  it('接続テスト', function(done) {
+  it('test connection', function(done) {
     assert(coll);
     return done();
   });
@@ -147,7 +147,7 @@ describe("myModule", function() {
           /*
           data[0]はinsert済みな所で再度insertするとエラーになる
            */
-          assert(err.err === 'E11000 duplicate key error index: mongo_test.testCollection.$_id_  dup key: { : 1 }');
+          assert(err.code === 11000);
           return done();
         });
       });
@@ -453,40 +453,85 @@ describe("myModule", function() {
     describe("insert or null", function() {
       return it('insert or null -1');
     });
-    return describe("distinkt", function() {
-      return it('insert or null -1');
-    });
-  });
-});
+    describe("distinct", function() {
 
-module.exports = {
-  upsert003: function() {
-    var json;
-    json = {
-      name: 'taro',
-      update_at: null,
-      "protected": false,
-      _id: 1
-    };
-    return collection.update({
-      name: 'taro'
-    }, json, {
-      upsert: true,
-      w: 1
-    }, function(err, result) {
-      return collection.find().toArray(function(err, items) {
-        log("insert:");
-        log(items);
-        json['protected'] = true;
-        return collection.save(json, function(err, result) {
-          return collection.find().toArray(function(err, items) {
-            log('save:');
-            log(items);
-            db.dropCollection('testCollection');
-            return db.close();
+      /*
+      distinct(key[, query][, options], callback)
+       */
+      return it('重複行を除外してデータを取得', function(done) {
+        var data;
+        data = [
+          {
+            name: 'taro',
+            place: 'tokyo',
+            text: 'こんにちはこんにちは！'
+          }, {
+            name: 'taro',
+            place: 'tokyo',
+            text: 'こんばんはこんばんは！'
+          }, {
+            name: 'jiro',
+            place: 'osaka',
+            text: 'まいどまいど'
+          }, {
+            name: 'hanako',
+            place: 'tokyo',
+            text: 'hey!guys!'
+          }
+        ];
+        return coll.insert(data, {
+          w: 1
+        }, function(err, result) {
+          return coll.distinct('name', function(err, docs) {
+            assert(err === null);
+            assert(docs.length === 3);
+            assert(docs.sort()[0] === ["taro", "jiro", "hanako"].sort()[0]);
+            assert(docs.sort()[1] === ["taro", "jiro", "hanako"].sort()[1]);
+            assert(docs.sort()[2] === ["taro", "jiro", "hanako"].sort()[2]);
+            return coll.distinct('name', {
+              place: 'tokyo'
+            }, function(err, docs) {
+              assert(docs.length === 2);
+              return done();
+            });
           });
         });
       });
     });
-  }
-};
+    return describe("count", function() {
+
+      /*
+      count([query][, options], callback)
+       */
+      return it('コレクションの要素数を取得', function(done) {
+        var data;
+        data = [
+          {
+            name: 'taro'
+          }, {
+            name: 'jiro'
+          }, {
+            name: 'andy'
+          }, {
+            name: 'bob'
+          }, {
+            name: 'jon'
+          }
+        ];
+        return coll.insert(data, {
+          w: 1
+        }, function(err, result) {
+          return coll.count(function(err, count1) {
+            assert(count1 === 5);
+            return coll.count({
+              name: 'taro'
+            }, function(err, count2) {
+              assert(count2 === 1);
+              return done();
+            });
+          });
+        });
+      });
+    });
+  });
+});
