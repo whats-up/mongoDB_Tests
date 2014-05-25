@@ -16,7 +16,7 @@ log = function(obj) {
   return console.log(util.inspect(obj, false, null));
 };
 
-describe("myModule", function() {
+describe("mongo Tests", function() {
   var coll, db, json;
   db = null;
   coll = null;
@@ -450,8 +450,110 @@ describe("myModule", function() {
         });
       });
     });
-    describe("insert or null", function() {
-      return it('insert or null -1');
+    describe("$setOnInsert", function() {
+
+      /*
+      update(selector, document($setOnInsert), {upsert:true} (and other options)[, callback])
+       */
+      it('$setOnInsert の部分はupdateされない', function(done) {
+        return coll.update({
+          name: 'taro'
+        }, {
+          $setOnInsert: {
+            status: 'null'
+          }
+        }, {
+          upsert: true
+        }, function(err, result) {
+          return coll.find().toArray(function(err, items) {
+            assert(items.length === 1);
+            return coll.update({
+              name: 'jiro'
+            }, {
+              $setOnInsert: {
+                status: 'null'
+              }
+            }, {
+              upsert: true
+            }, function(err, result) {
+              return coll.find().toArray(function(err, items) {
+                assert(items.length === 2);
+                return coll.update({
+                  name: 'jiro'
+                }, {
+                  $setOnInsert: {
+                    status: 'insert'
+                  }
+                }, {
+                  upsert: true
+                }, function(err, result) {
+                  return coll.find().toArray(function(err, items) {
+                    assert(items.length === 2);
+                    return coll.findOne({
+                      name: 'jiro'
+                    }, function(err, item) {
+                      assert(item.status === 'null');
+                      assert(item.status !== 'insert');
+                      return done();
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+      return it('$set の部分はupdateされる', function(done) {
+        return coll.update({
+          name: 'taro'
+        }, {
+          $setOnInsert: {
+            status: 'null'
+          }
+        }, {
+          upsert: true
+        }, function(err, result) {
+          return coll.find().toArray(function(err, items) {
+            assert(items.length === 1);
+            return coll.update({
+              name: 'jiro'
+            }, {
+              $setOnInsert: {
+                status: 'null'
+              }
+            }, {
+              upsert: true
+            }, function(err, result) {
+              return coll.find().toArray(function(err, items) {
+                assert(items.length === 2);
+                return coll.update({
+                  name: 'jiro'
+                }, {
+                  $setOnInsert: {
+                    status: 'insert'
+                  },
+                  $set: {
+                    status: 'update'
+                  }
+                }, {
+                  upsert: true
+                }, function(err, result) {
+                  return coll.find().toArray(function(err, items) {
+                    assert(items.length === 2);
+                    return coll.findOne({
+                      name: 'jiro'
+                    }, function(err, item) {
+                      assert(item.status !== 'null');
+                      assert(item.status === 'update');
+                      return done();
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
     });
     describe("distinct", function() {
 
@@ -498,7 +600,7 @@ describe("myModule", function() {
         });
       });
     });
-    return describe("count", function() {
+    describe("count", function() {
 
       /*
       count([query][, options], callback)
@@ -529,6 +631,76 @@ describe("myModule", function() {
               assert(count2 === 1);
               return done();
             });
+          });
+        });
+      });
+    });
+    return describe("findAndModify", function() {
+
+      /*
+      [findAndModify(query, sort, doc[, options], callback)](http://mongodb.github.io/node-mongodb-native/api-generated/collection.html#findandmodify)
+       */
+      it('要素を修正して取得する', function(done) {
+        var data;
+        data = [
+          {
+            name: 'taro'
+          }, {
+            name: 'jiro'
+          }, {
+            name: 'andy'
+          }, {
+            name: 'bob'
+          }, {
+            name: 'jon'
+          }
+        ];
+        return coll.insert(data, {
+          w: 1
+        }, function(err, result) {
+          return coll.findAndModify({
+            name: 'taro'
+          }, [['name', 1]], {
+            $set: {
+              age: 18
+            }
+          }, function(err, doc) {
+            assert(doc.name === 'taro');
+            assert(doc.age === void 0);
+            return done();
+          });
+        });
+      });
+      return it('{new:true}を設定すると$set後の要素を取得する', function(done) {
+        var data;
+        data = [
+          {
+            name: 'taro'
+          }, {
+            name: 'jiro'
+          }, {
+            name: 'andy'
+          }, {
+            name: 'bob'
+          }, {
+            name: 'jon'
+          }
+        ];
+        return coll.insert(data, {
+          w: 1
+        }, function(err, result) {
+          return coll.findAndModify({
+            name: 'taro'
+          }, [['name', 1]], {
+            $set: {
+              age: 18
+            }
+          }, {
+            "new": true
+          }, function(err, doc) {
+            assert(doc.name === 'taro');
+            assert(doc.age === 18);
+            return done();
           });
         });
       });

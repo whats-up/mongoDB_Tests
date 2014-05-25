@@ -8,7 +8,7 @@ assert = require('power-assert')
 util = require('util')
 log =(obj)->
   console.log util.inspect obj, false, null
-describe "myModule", ->
+describe "mongo Tests", ->
   db = null
   coll = null
   json = null
@@ -273,8 +273,38 @@ describe "myModule", ->
 
 
 
-    describe "insert or null",->
-      it 'insert or null -1'
+    describe "$setOnInsert",->
+      ###
+      update(selector, document($setOnInsert), {upsert:true} (and other options)[, callback])
+      ###
+      it '$setOnInsert の部分はupdateされない',(done)->
+        coll.update {name:'taro'},{$setOnInsert:{status:'null'}},{upsert:true},(err,result)->
+          coll.find().toArray (err,items)->
+            assert items.length is 1
+            coll.update {name:'jiro'},{$setOnInsert:{status:'null'}},{upsert:true},(err,result)->
+              coll.find().toArray (err,items)->
+                assert items.length is 2
+                coll.update {name:'jiro'},{$setOnInsert:{status:'insert'}},{upsert:true},(err,result)->
+                  coll.find().toArray (err,items)->
+                    assert items.length is 2
+                    coll.findOne {name:'jiro'},(err,item)->
+                      assert item.status is 'null'
+                      assert item.status isnt 'insert'
+                      done()
+      it '$set の部分はupdateされる',(done)->
+        coll.update {name:'taro'},{$setOnInsert:{status:'null'}},{upsert:true},(err,result)->
+          coll.find().toArray (err,items)->
+            assert items.length is 1
+            coll.update {name:'jiro'},{$setOnInsert:{status:'null'}},{upsert:true},(err,result)->
+              coll.find().toArray (err,items)->
+                assert items.length is 2
+                coll.update {name:'jiro'},{$setOnInsert:{status:'insert'},$set:{status:'update'}},{upsert:true},(err,result)->
+                  coll.find().toArray (err,items)->
+                    assert items.length is 2
+                    coll.findOne {name:'jiro'},(err,item)->
+                      assert item.status isnt 'null'
+                      assert item.status is 'update'
+                      done()
     describe "distinct",->
       ###
       distinct(key[, query][, options], callback)
@@ -315,3 +345,33 @@ describe "myModule", ->
             coll.count {name:'taro'},(err,count2)->
               assert count2 is 1
               done()
+    describe "findAndModify",->
+      ###
+      [findAndModify(query, sort, doc[, options], callback)](http://mongodb.github.io/node-mongodb-native/api-generated/collection.html#findandmodify)
+      ###
+      it '要素を修正して取得する',(done)->
+        data =[
+          {name:'taro'}
+          {name:'jiro'}
+          {name:'andy'}
+          {name:'bob'}
+          {name:'jon'}
+        ]
+        coll.insert data,{w:1},(err,result)->
+          coll.findAndModify {name:'taro'},[['name',1]],{$set:{age:18}},(err,doc)->
+            assert doc.name is 'taro'
+            assert doc.age is undefined
+            done()
+      it '{new:true}を設定すると$set後の要素を取得する',(done)->
+        data =[
+          {name:'taro'}
+          {name:'jiro'}
+          {name:'andy'}
+          {name:'bob'}
+          {name:'jon'}
+        ]
+        coll.insert data,{w:1},(err,result)->
+          coll.findAndModify {name:'taro'},[['name',1]],{$set:{age:18}},{new:true},(err,doc)->
+            assert doc.name is 'taro'
+            assert doc.age is 18
+            done()
