@@ -42,7 +42,7 @@ describe "mongo Tests", ->
     insert(docs[, options][, callback])
     ###
 
-    it "単一のobjectをinsertする",(done) ->
+    it "単一のobjectをinsertするyo",(done) ->
       coll.insert json,{w:1},(err, result)->
         coll.find().toArray (err,items)->
           assert(items.length is 1)

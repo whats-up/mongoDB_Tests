@@ -58,7 +58,7 @@ describe("mongo Tests", function() {
     /*
     insert(docs[, options][, callback])
      */
-    it("単一のobjectをinsertする", function(done) {
+    it("単一のobjectをinsertするyo", function(done) {
       return coll.insert(json, {
         w: 1
       }, function(err, result) {

@@ -1,4 +1,4 @@
-var BSON, Db, assert, log, mongo, mongoUri, util;
+var BSON, Db, assert, jsonDict, jsonFunc, log, mongo, mongoUri, util;
 
 mongo = require("mongodb");
 
@@ -14,6 +14,18 @@ util = require('util');
 
 log = function(obj) {
   return console.log(util.inspect(obj, false, null));
+};
+
+jsonFunc = function() {
+  return {
+    name: 'jon',
+    age: 20
+  };
+};
+
+jsonDict = {
+  name: 'jon',
+  age: 20
 };
 
 describe("insert Tests", function() {
@@ -77,13 +89,35 @@ describe("insert Tests", function() {
         return done();
       });
     });
-    return it("変数化したjsonにはinsertしたタイミングで_idが付与されている", function(done) {
+    it("変数化したjsonにはinsertしたタイミングで_idが付与されている", function(done) {
       json = {
         name: 'taro'
       };
       assert(json._id === void 0);
       return coll.insert(json, function(err, result) {
         assert(json._id);
+        return done();
+      });
+    });
+    it('jsonをグローバル変数から取得した場合も_idは付与される(書き換わる)', function(done) {
+      json = jsonDict;
+      assert(json._id === void 0);
+      return coll.insert(json, function(err, result) {
+        var json2;
+        assert(json._id);
+        json2 = jsonDict;
+        assert(json2 === json);
+        return done();
+      });
+    });
+    return it('jsonを関数から取得した場合、_idは付与されない', function(done) {
+      json = jsonFunc();
+      assert(json._id === void 0);
+      return coll.insert(json, function(err, result) {
+        var json2;
+        assert(json._id);
+        json2 = jsonFunc();
+        assert(json2._id === void 0);
         return done();
       });
     });

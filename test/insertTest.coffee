@@ -7,6 +7,15 @@ assert = require('power-assert')
 util = require('util')
 log =(obj)->
   console.log util.inspect obj, false, null
+jsonFunc = ()->
+  return {
+    name:'jon'
+    age:20
+  }
+jsonDict = {
+  name:'jon'
+  age:20
+}
 describe "insert Tests", ->
   db = null
   coll = null
@@ -52,4 +61,20 @@ describe "insert Tests", ->
       assert(json._id is undefined)
       coll.insert json,(err, result)->
         assert(json._id)
+        done()
+    it 'jsonをグローバル変数から取得した場合も_idは付与される(書き換わる)',(done)->
+      json = jsonDict
+      assert(json._id is undefined)
+      coll.insert json,(err, result)->
+        assert(json._id)
+        json2 = jsonDict
+        assert json2 is json
+        done()
+    it 'jsonを関数から取得した場合、_idは付与されない',(done)->
+      json = jsonFunc()
+      assert(json._id is undefined)
+      coll.insert json,(err, result)->
+        assert(json._id)
+        json2 = jsonFunc()
+        assert json2._id is undefined
         done()
